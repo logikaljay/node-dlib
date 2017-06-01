@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+dlib::shape_predictor face_predictor;
+
 class DetectAsyncWorker : public Nan::AsyncWorker {
  public:
   DetectAsyncWorker(FrontalFaceDetector * frontalFaceDetector, std::string filename, Nan::Callback *callback)
@@ -19,11 +21,13 @@ class DetectAsyncWorker : public Nan::AsyncWorker {
       dlib::load_image(img, filename);
       //dlib::pyramid_up(img);
 
+      frontalFaceDetector->shape.assign("face");
+
       dets = frontalFaceDetector->detector(img);
 
       if (!frontalFaceDetector->shape.empty()) {
         for (unsigned int i = 0; i < dets.size(); i++) {
-          dlib::full_object_detection shape = frontalFaceDetector->sp(img, dets[i]);
+          dlib::full_object_detection shape = face_predictor(img, dets[i]);
 
           std::map<std::string, dlib::point> points;
 
@@ -157,6 +161,9 @@ FrontalFaceDetector::~FrontalFaceDetector() {
 
 void FrontalFaceDetector::Init(v8::Local<v8::Object> exports) {
   Nan::HandleScope scope;
+
+  // Initialize shape predictor by loading the model
+  dlib::deserialize("shape_predictor_68_face_landmarks.dat") >> face_predictor;
 
   // Prepare constructor template
   v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
